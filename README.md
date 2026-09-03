@@ -1,1 +1,0 @@
-# Samyek_ai
