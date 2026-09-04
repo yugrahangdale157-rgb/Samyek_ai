@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f5f2">
+<meta name="description" content="Samyek — a local-first AI workspace for conversation, memory, files and projects.">
+<title>Samyek — AI Workspace</title>
+<style>
+:root{
+  --bg:#f7f5f2;--surface:#fff;--surface2:#f2f0ec;--surface3:#eae7e1;
+  --ink:#262421;--muted:#716d66;--faint:#a29d95;--line:#dedbd5;
+  --accent:#d97757;--accent2:#c55f3f;--good:#3f8f68;--bad:#c45151;
+  --shadow:0 18px 55px rgba(38,36,33,.10);--sidebar:275px;--radius:16px;
+}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+button,input,textarea,select{font:inherit}button{color:inherit}
+.app{height:100%;display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);position:relative}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid rgba(217,119,87,.45);outline-offset:2px}
+
+/* Sidebar — Claude-inspired spacious editorial layout */
+.sidebar{background:#f2f0ec;border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;z-index:30}
+.brand{height:66px;padding:0 18px;display:flex;align-items:center;gap:11px}
+.brandmark{width:30px;height:30px;border-radius:9px;background:#262421;color:#fff;display:grid;place-items:center;font-weight:800;letter-spacing:-.05em}
+.brand b{font-size:15px;letter-spacing:-.025em}.brand small{display:block;color:var(--muted);font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.newchat{margin:3px 12px 16px;padding:11px 12px;border:1px solid #d3cec6;background:#fff;border-radius:11px;text-align:left;cursor:pointer;display:flex;gap:9px;align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.02)}
+.newchat:hover{background:#faf9f7;border-color:#c7c1b8}.newchat span:last-child{margin-left:auto;color:var(--faint);font-size:11px}
+.side-actions{padding:0 10px;display:grid;gap:2px}.side-btn{border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:9px;cursor:pointer;color:#625e57;display:flex;gap:10px;align-items:center}
+.side-btn:hover{background:rgba(255,255,255,.75);color:var(--ink)}.side-btn .count{margin-left:auto;color:var(--faint);font-size:11px}
+.label{padding:18px 18px 7px;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#9a958c}
+.sessions{flex:1;overflow:auto;padding:0 8px 12px}.session{padding:9px 10px;border-radius:9px;display:flex;gap:8px;align-items:center;cursor:pointer;margin:1px 0;color:#5f5a53}
+.session:hover{background:rgba(255,255,255,.72)}.session.active{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.035)}
+.session-dot{width:5px;height:5px;border-radius:50%;background:#c8c3bb}.session.active .session-dot{background:var(--accent)}
+.session-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.session-time{font-size:9px;color:#aaa49b}
+.side-footer{border-top:1px solid var(--line);padding:12px 15px;color:#777168;font-size:10px;display:flex;gap:7px;align-items:center}.dot{width:7px;height:7px;border-radius:50%;background:var(--good)}
+
+/* Main */
+.main{min-width:0;display:flex;flex-direction:column;position:relative;background:var(--surface)}
+.topbar{height:66px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:8px;background:rgba(255,255,255,.82);backdrop-filter:blur(14px);z-index:10}
+.mobile-menu{display:none}.title{font-size:13px;font-weight:650;max-width:310px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.model{font-size:11px;color:var(--muted);margin-left:2px}.spacer{flex:1}.icon{width:35px;height:35px;border:0;background:transparent;border-radius:9px;display:grid;place-items:center;cursor:pointer;color:#777168}
+.icon:hover{background:var(--surface2);color:var(--ink)}.status{font-size:10px;color:var(--muted);margin-right:4px}.status.ok{color:var(--good)}.status.busy{color:#a87828}.status.err{color:var(--bad)}
+
+/* Conversation */
+.conversation{flex:1;overflow:auto;scroll-behavior:smooth}.thread{width:min(840px,100%);margin:auto;padding:34px 26px 170px}
+.welcome{min-height:calc(100vh - 220px);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:30px 0}
+.orb{width:78px;height:78px;border-radius:25px;background:linear-gradient(145deg,#2e2a27,#514a44);color:white;display:grid;place-items:center;font-size:25px;font-weight:700;letter-spacing:-.06em;box-shadow:0 20px 45px rgba(38,36,33,.18);margin-bottom:24px;position:relative}
+.orb:after{content:"";position:absolute;inset:-9px;border:1px solid rgba(217,119,87,.22);border-radius:30px;animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.04);opacity:.55}}
+.welcome h1{font-family:Georgia,"Times New Roman",serif;font-weight:500;font-size:clamp(34px,5vw,53px);letter-spacing:-.045em;line-height:1.05;margin:0 0 13px}
+.welcome p{max-width:600px;color:var(--muted);margin:0 0 25px}.prompts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:min(650px,100%);text-align:left}
+.prompt{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px;cursor:pointer;color:#5d5952}.prompt:hover{border-color:#cfc9c0;background:#fcfbf9}.prompt b{display:block;color:var(--ink);font-size:12px;margin-bottom:2px}.prompt span{font-size:11px;color:var(--muted)}
+
+.message{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;margin:28px 0}.avatar{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:10px;font-weight:750;background:var(--surface2);color:#6e6961}
+.assistant .avatar{background:#2c2926;color:#fff}.meta{display:flex;gap:8px;align-items:center;margin:1px 0 6px}.meta b{font-size:12px}.meta span{font-size:10px;color:#aaa49b}.body{font-size:14px;min-width:0;color:#302e2b}.user .body{background:#f4f1ed;border-radius:5px 14px 14px 14px;padding:12px 14px}
+.body p{margin:0 0 11px}.body p:last-child{margin-bottom:0}.body h2,.body h3,.body h4{font-family:Georgia,serif;font-weight:500;margin:20px 0 8px}.body ul,.body ol{padding-left:22px}.body code{background:#f0ede8;border:1px solid #e1ddd6;border-radius:5px;padding:1px 5px;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}
+.body a{color:#a84f34}.code{border:1px solid #ddd8d0;border-radius:11px;background:#fbfaf8;overflow:hidden;margin:12px 0}.codehead{height:34px;border-bottom:1px solid #e1ddd6;display:flex;align-items:center;padding:0 10px;font-size:10px;color:#777168}.codehead button{margin-left:auto;border:0;background:transparent;color:#8c867d;cursor:pointer}.code pre{margin:0;padding:14px;overflow:auto;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;color:#3d3a36}
+.actions{display:flex;gap:2px;margin-top:7px;opacity:0}.message:hover .actions{opacity:1}.actions button{border:0;background:transparent;color:#a19b92;font-size:10px;padding:4px 6px;border-radius:6px;cursor:pointer}.actions button:hover{background:var(--surface2);color:var(--ink)}
+.typing{display:flex;gap:4px;padding:7px 0}.typing i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:t 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}@keyframes t{50%{opacity:.2;transform:translateY(-3px)}}
+
+/* Composer */
+.composer-zone{position:absolute;left:0;right:0;bottom:0;padding-bottom:max(17px,env(safe-area-inset-bottom));padding:14px 20px 17px;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.96) 27%)}
+.composer{width:min(840px,100%);margin:auto;background:#fff;border:1px solid #d8d3cb;border-radius:16px;box-shadow:0 10px 35px rgba(38,36,33,.09);overflow:hidden}
+.attachments{display:none;border-bottom:1px solid #e6e2dc;padding:8px;gap:6px;overflow:auto}.attachments.show{display:flex}.attachment{font-size:10px;background:#f3f0eb;border:1px solid #e0dbd3;padding:5px 8px;border-radius:8px;white-space:nowrap}
+textarea{width:100%;min-height:56px;max-height:190px;border:0;outline:0;resize:none;padding:14px 14px 6px;background:transparent;color:var(--ink);line-height:1.5}
+.compose{display:flex;align-items:center;padding:5px 8px 8px;gap:3px}.send{margin-left:auto;width:38px;height:38px;border:0;border-radius:11px;background:#292622;color:#fff;cursor:pointer;font-weight:700}.send:hover{background:#44403b}.send:disabled{opacity:.35}.hint{text-align:center;color:#aaa49b;font-size:9px;margin-top:7px}
+
+/* Right panels */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(390px,92vw);background:#faf9f7;border-left:1px solid var(--line);box-shadow:-20px 0 55px rgba(0,0,0,.12);z-index:40;transform:translateX(105%);transition:.22s;display:flex;flex-direction:column}.drawer.open{transform:none}
+.drawer-head{height:66px;border-bottom:1px solid var(--line);padding:0 16px;display:flex;align-items:center}.drawer-head b{flex:1;font-size:12px}.drawer-body{padding:15px;overflow:auto}
+.card{border:1px solid var(--line);background:#fff;border-radius:13px;padding:13px;margin-bottom:10px}.card h3{font:500 16px Georgia,serif;margin:0 0 10px}.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eeeae4;font-size:11px}.kv:last-child{border:0}.kv span{color:var(--muted)}
+.mem{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid #eeeae4;padding:9px 0}.mem:last-child{border:0}.mem p{margin:0;flex:1;font-size:11px}.mini{border:1px solid var(--line);background:#fff;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:11px}.mini:hover{background:var(--surface2)}.danger{color:var(--bad)}
+
+/* Project workspace */
+.workspace{position:fixed;inset:0;background:#f5f3ef;z-index:60;display:none;grid-template-columns:250px 1fr}.workspace.open{display:grid}.files{border-right:1px solid var(--line);overflow:auto}.workspace-head{height:58px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:7px}.workspace-head b{font-size:12px;flex:1}.file{padding:8px 12px;cursor:pointer;font:11px ui-monospace,monospace;color:#666158;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.file:hover,.file.active{background:#fff;color:var(--ink)}.editor{display:flex;flex-direction:column;min-width:0}.editor textarea{flex:1;background:#fff;border-radius:0;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;padding:20px;color:#2d2a27}.editor-bar{height:45px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 10px;gap:6px}.editor-bar b{font-size:11px;flex:1}.project-actions{display:flex;gap:6px}
+
+/* Modal */
+.backdrop{position:fixed;inset:0;background:rgba(25,23,21,.38);backdrop-filter:blur(5px);z-index:80;display:none;place-items:center;padding:18px}.backdrop.open{display:grid}.modal{width:min(650px,100%);max-height:90vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.modalhead{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}.modalhead b{flex:1;font-size:12px}.modalbody{padding:18px}.field{margin-bottom:14px}.field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#898279;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;background:#faf9f7;border:1px solid var(--line);border-radius:10px;padding:10px;outline:0;color:var(--ink)}.field textarea{min-height:105px;resize:vertical}.row{display:flex;gap:8px}.row>*{flex:1}.modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer}.btn.primary{background:#292622;color:#fff;border-color:#292622}.btn.danger{color:var(--bad)}
+.search{width:min(620px,100%)}.search input{width:100%;border:0;border-bottom:1px solid var(--line);padding:16px;outline:0}.results{padding:8px}.result{padding:10px;border-radius:9px;cursor:pointer}.result:hover{background:var(--surface2)}.result b{font-size:12px}.result span{display:block;color:var(--muted);font-size:10px}
+
+
+/* SAMYEK ADVANCED NEURAL MODE — light theme */
+body.advanced-mode{
+  --bg:#f4f8f8;--surface:#fbffff;--surface2:#edf5f5;--surface3:#e3eeee;
+  --ink:#102a35;--muted:#5e747c;--faint:#91a5ab;--line:#c9dde0;
+  --accent:#12b9c8;--accent2:#087f91;--good:#2f9a72;--bad:#c94e4e;
+}
+.advanced-mode .sidebar{
+  background:linear-gradient(180deg,#f3f9f9,#eaf4f5);
+  border-right-color:#bcd5d8;
+}
+.advanced-mode .brandmark{
+  background:#0b2c36;box-shadow:0 0 0 1px #1ac7d5,0 0 24px rgba(18,185,200,.22)
+}
+.advanced-mode .topbar{
+  background:rgba(249,254,254,.88);border-bottom-color:#c4dadd
+}
+.advanced-mode .main{
+  background:
+    radial-gradient(circle at 50% 20%,rgba(18,185,200,.07),transparent 34%),
+    linear-gradient(rgba(19,137,151,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(19,137,151,.045) 1px,transparent 1px),
+    var(--surface);
+  background-size:auto,28px 28px,28px 28px,auto;
+}
+.advanced-mode .composer{
+  border-color:#b9d4d8;box-shadow:0 15px 40px rgba(13,91,103,.10)
+}
+.advanced-mode .welcome{position:relative}
+.advanced-mode .welcome h1{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:750;letter-spacing:-.055em}
+.advanced-mode .welcome p{max-width:650px}
+.neural-stage{
+  width:min(760px,100%);height:235px;margin:0 auto 14px;position:relative;overflow:hidden;
+  border:1px solid #b9d7db;border-radius:22px;
+  background:
+    radial-gradient(circle at 50% 48%,rgba(21,211,222,.14),transparent 20%),
+    linear-gradient(180deg,rgba(6,48,61,.045),rgba(6,48,61,.015));
+}
+.neural-stage:before,.neural-stage:after{content:"";position:absolute;inset:16px;border:1px solid rgba(18,185,200,.22);clip-path:polygon(0 8%,8% 0,92% 0,100% 8%,100% 92%,92% 100%,8% 100%,0 92%)}
+.neural-stage:after{inset:29px;border-color:rgba(18,185,200,.11);animation:scan 5s linear infinite}
+@keyframes scan{to{transform:rotate(360deg)}}
+.neural-svg{position:absolute;inset:0;width:100%;height:100%}
+.neural-svg .wire{fill:none;stroke:#12b9c8;stroke-width:1.3;opacity:.62}
+.neural-svg .node{fill:#faffff;stroke:#10b9c8;stroke-width:1.4}
+.neural-svg .pulse{fill:#ffd33d;filter:drop-shadow(0 0 6px rgba(255,211,61,.55))}
+.neural-svg .brain{fill:rgba(18,185,200,.06);stroke:#0da9b9;stroke-width:2.2;filter:drop-shadow(0 0 10px rgba(18,185,200,.24))}
+.neural-svg .core{fill:#0d3440;stroke:#27d5df;stroke-width:2}
+.advanced-panels{display:none;grid-template-columns:repeat(4,1fr);gap:8px;width:min(760px,100%);margin:0 auto 12px}
+.advanced-mode .advanced-panels{display:grid}
+.adv-card{border:1px solid #bdd7da;background:rgba(255,255,255,.82);border-radius:10px;padding:9px;text-align:left}
+.adv-card small{display:block;color:#7b9097;font-size:8px;text-transform:uppercase;letter-spacing:.12em}
+.adv-card b{display:block;color:#0b3a46;font-size:11px;margin-top:2px}
+.advanced-mode .orb{display:none}
+.advanced-mode .prompt{border-color:#c1dadd;background:rgba(255,255,255,.84)}
+.advanced-mode .prompt:hover{border-color:#5bc9d3;box-shadow:0 4px 18px rgba(18,185,200,.08)}
+.advanced-mode .assistant .avatar{background:#0b3440;border:1px solid #22c7d2}
+.advanced-mode .send{background:#0c3540;box-shadow:0 0 0 1px #16c3cf,0 5px 18px rgba(18,185,200,.18)}
+.advanced-mode .send:hover{background:#07505d}
+.advanced-badge{display:none;font-size:9px;color:#087f91;border:1px solid #9ed5da;background:#ecfbfc;border-radius:999px;padding:3px 7px;text-transform:uppercase;letter-spacing:.08em}
+.advanced-mode .advanced-badge{display:inline-block}
+.advanced-menu-card{border:1px solid #b9d5d9;background:#fff;border-radius:12px;padding:10px;margin:8px 12px 10px;display:flex;align-items:center;gap:9px}
+.advanced-menu-card .adv-copy{flex:1}.advanced-menu-card b{font-size:11px;display:block}.advanced-menu-card small{font-size:9px;color:#7c8d92}
+.toggle{width:40px;height:22px;border:0;border-radius:99px;background:#d7dedf;padding:2px;cursor:pointer}.toggle i{display:block;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px #999;transition:.18s}.toggle.on{background:#12b9c8}.toggle.on i{transform:translateX(18px)}
+.advanced-mode .code{border-color:#b9d4d8;background:#f8fcfc}
+.advanced-mode .codehead{border-color:#c9dfe2;background:#eff8f8}
+.advanced-mode .body code{background:#edf7f8;border-color:#cde1e3}
+
+/* Mobile */
+@media(max-width:780px){
+  :root{--sidebar:280px}.app{display:block}.sidebar{position:fixed;inset:0 18% 0 0;transform:translateX(-105%);transition:.22s;box-shadow:20px 0 55px rgba(0,0,0,.12)}.sidebar.open{transform:none}.mobile-menu{display:grid}.topbar{height:60px;padding:0 9px}.status{display:none}.thread{padding:22px 14px 165px}.prompts{grid-template-columns:1fr}.welcome{min-height:calc(100vh - 200px)}.welcome h1{font-size:36px}.message{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px}.composer-zone{padding:8px 8px max(11px,env(safe-area-inset-bottom))}.workspace{grid-template-columns:190px 1fr}.drawer{width:94vw}
+}
+@media(max-width:780px){
+  body{overscroll-behavior:none}.main{height:100dvh}.conversation{padding-bottom:0}.composer-zone{z-index:12}.topbar{padding-top:env(safe-area-inset-top)}
+  .sidebar{padding-bottom:env(safe-area-inset-bottom)}
+  .workspace{grid-template-columns:1fr;grid-template-rows:220px minmax(0,1fr)}
+  .files{border-right:0;border-bottom:1px solid var(--line);min-height:0}
+  .editor{min-height:0}.editor textarea{min-height:0}
+  .workspace-head{height:52px}.file{padding:10px 12px}
+  .project-actions .mini{padding:7px 8px}
+}
+@media(max-width:430px){
+  .topbar .model{display:none}.topbar{gap:2px}.topbar .title{max-width:170px}
+  .thread{padding-left:10px;padding-right:10px}.message{margin:22px 0}.body{font-size:13.5px}
+  .composer{border-radius:14px}.compose{padding-bottom:7px}.hint{display:none}
+  .welcome{padding:15px 4px}.welcome p{font-size:12px}.prompts{gap:7px}.prompt{padding:11px}
+}
+
+@media(max-width:780px){
+  .neural-stage{height:190px;border-radius:16px}
+  .advanced-panels{grid-template-columns:repeat(2,1fr)}
+  .advanced-mode .thread{padding-top:14px}
+  .advanced-mode .welcome{min-height:calc(100vh - 180px)}
+}
+
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div id="app" class="app">
+<aside id="sidebar" class="sidebar">
+  <div class="brand"><div class="brandmark">S</div><div><b>Samyek</b><small>AI workspace</small></div></div>
+  <button class="newchat" id="newChat"><span>＋</span><strong>New chat</strong><span>⌘ K</span></button>
+  <div class="side-actions">
+    <button class="side-btn" id="searchBtn">⌕ <span>Search chats</span></button>
+    <button class="side-btn" id="memoryBtn">✦ <span>Memories</span><span class="count" id="memoryCount">0</span></button>
+    <button class="side-btn" id="projectsBtn">▱ <span>Projects</span></button>
+    <button class="side-btn" id="exportBtn">⇩ <span>Export workspace</span></button>
+    <button class="side-btn" id="importBtn">⇧ <span>Import workspace</span></button>
+    <input id="importFile" type="file" accept="application/json" hidden>
+  </div>
+  <div class="advanced-menu-card">
+    <div class="adv-copy"><b>Advanced Mode</b><small>Neural workspace · visual telemetry</small></div>
+    <button class="toggle" id="advancedToggle" aria-label="Toggle Advanced Mode"><i></i></button>
+  </div>
+  <div class="label">Recent</div><div id="sessions" class="sessions"></div>
+  <div class="side-footer"><i class="dot"></i><span>Local workspace</span><span style="margin-left:auto" id="storage">0 KB</span></div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <button class="icon mobile-menu" id="mobileMenu">☰</button>
+    <div class="title" id="chatTitle">New chat</div><span class="model" id="modelLabel">GPT-5.6 Sol</span><span class="advanced-badge">Neural Advanced</span>
+    <div class="spacer"></div><span id="status" class="status ok">Ready</span>
+    <button class="icon" id="filesBtn" title="Files">⌘</button>
+    <button class="icon" id="inspectorBtn" title="Workspace">◫</button>
+    <button class="icon" id="settingsBtn" title="Settings">⚙</button>
+  </header>
+  <section id="conversation" class="conversation"><div id="thread" class="thread"></div></section>
+  <div class="composer-zone">
+    <div class="composer">
+      <div id="attachments" class="attachments"></div>
+      <textarea id="input" rows="1" placeholder="Message Samyek…"></textarea>
+      <div class="compose">
+        <button class="icon" id="attachBtn" title="Attach files or images">＋</button>
+        <input id="fileInput" type="file" multiple hidden>
+        <button class="icon" id="micBtn" title="Voice input">◉</button>
+        <button class="icon" id="speakBtn" title="Speak last response">◌</button>
+        <button class="icon" id="buildBtn" title="Build a project">▱</button>
+        <div class="spacer"></div><button class="send" id="send">↑</button>
+      </div>
+    </div>
+    <div class="hint">ENTER TO SEND · SHIFT+ENTER NEW LINE · YOUR CHATS & MEMORIES STAY ON THIS DEVICE</div>
+  </div>
+</main>
+</div>
+
+<aside id="drawer" class="drawer">
+  <div class="drawer-head"><b id="drawerTitle">Workspace</b><button class="icon" id="closeDrawer">×</button></div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<section id="projectWorkspace" class="workspace">
+  <div class="files">
+    <div class="workspace-head"><b>PROJECT FILES</b><button class="icon" id="closeProject">×</button></div>
+    <div id="fileTree"></div>
+  </div>
+  <div class="editor">
+    <div class="editor-bar"><b id="editorName">Select a file</b><div class="project-actions"><button class="mini" id="downloadFile">Download</button><button class="mini" id="downloadProject">Export project</button></div></div>
+    <textarea id="editor" spellcheck="false" placeholder="Select a generated file…"></textarea>
+  </div>
+</section>
+
+<div id="backdrop" class="backdrop">
+  <div id="modal" class="modal">
+    <div class="modalhead"><b id="modalTitle">Settings</b><button class="icon" id="closeModal">×</button></div>
+    <div class="modalbody" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/*
+  SAMYEK — local-first AI workspace.
+  Direct mode calls OneHop from the browser.
+  Proxy mode is recommended for GitHub Pages/production because browser CORS
+  cannot be fixed from index.html. Never hard-code a secret API key in source.
+*/
+
+const STORE="samyek_workspace_v2";
+const PROJECT_STORE="samyek_project_v2";
+const DEFAULTS={
+  endpoint:"https://api.onehop.ai/v1/chat/completions",
+  proxyEndpoint:"",
+  apiKey:"",
+  model:"openai/gpt-5.6-sol",
+  system:"You are Samyek, a capable AI assistant and software-building partner. Be accurate, practical and concise. When asked to build software, reason about architecture and return complete runnable files. For multi-file projects, use this exact format for every file: FILE: path/to/file.ext followed by a fenced code block containing the complete file. Never omit required files. If the user asks you to remember something, explicitly state that it is a memory candidate.",
+  stream:true,memory:true,advanced:false,autoProxy:true
+};
+
+let data=load(), activeId=data.activeId||null, attachments=[], controller=null, busy=false;
+let project=loadProject();
+
+function loadProject(){
+  try{const x=JSON.parse(localStorage.getItem(PROJECT_STORE)||"null");return {files:x?.files&&typeof x.files==="object"?x.files:{},active:x?.active||null}}catch(_){return {files:{},active:null}}
+}
+function saveProject(){try{localStorage.setItem(PROJECT_STORE,JSON.stringify(project))}catch(_){}}
+function load(){
+  try{
+    const x=JSON.parse(localStorage.getItem(STORE)||"null");
+    return {settings:{...DEFAULTS,...(x?.settings||{}),advanced:!!(x?.settings?.advanced),autoProxy:x?.settings?.autoProxy!==false},chats:Array.isArray(x?.chats)?x.chats:[],memories:Array.isArray(x?.memories)?x.memories:[],activeId:x?.activeId||null};
+  }catch(_){return {settings:{...DEFAULTS},chats:[],memories:[],activeId:null}}
+}
+function save(){
+  data.activeId=activeId;
+  try{localStorage.setItem(STORE,JSON.stringify(data))}catch(_){setStatus("Storage full","err")}
+  updateStorage();
+}
+function uid(){return crypto?.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random().toString(36).slice(2)}
+function iso(){return new Date().toISOString()}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function active(){return data.chats.find(c=>c.id===activeId)}
+function ensure(){if(!active())return newChat();return active()}
+function fmt(t){const d=new Date(t),s=(Date.now()-d)/1000;if(!Number.isFinite(s))return"";if(s<60)return"now";if(s<3600)return Math.floor(s/60)+"m";if(s<86400)return Math.floor(s/3600)+"h";return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})}
+function title(s){return String(s||"").replace(/\s+/g," ").trim().slice(0,55)||"New chat"}
+function updateStorage(){
+  const raw=localStorage.getItem(STORE)||"";
+  document.getElementById("storage").textContent=(new Blob([raw]).size/1024).toFixed(1)+" KB";
+  document.getElementById("memoryCount").textContent=data.memories.length;
+}
+function newChat(){const c={id:uid(),title:"New chat",createdAt:iso(),updatedAt:iso(),messages:[]};data.chats.unshift(c);activeId=c.id;save();render();closeSidebar();return c}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open")}
+function sessionMenu(c){
+  const action=prompt(`Chat: ${c.title}\nType rename, delete, or cancel`,"rename");
+  if(action?.toLowerCase()==="rename"){const n=prompt("New chat name",c.title);if(n?.trim()){c.title=title(n);c.updatedAt=iso();save();render()}}
+  else if(action?.toLowerCase()==="delete"&&confirm("Delete this conversation?")){data.chats=data.chats.filter(x=>x.id!==c.id);if(activeId===c.id)activeId=data.chats[0]?.id||null;if(!activeId)newChat();else{save();render()}}
+}
+function renderSidebar(){
+  const el=document.getElementById("sessions");el.innerHTML="";
+  data.chats.forEach(c=>{const d=document.createElement("div");d.className="session"+(c.id===activeId?" active":"");d.innerHTML=`<i class="session-dot"></i><span class="session-title">${esc(c.title)}</span><span class="session-time">${fmt(c.updatedAt)}</span>`;d.onclick=()=>{activeId=c.id;save();render();closeSidebar()};d.oncontextmenu=e=>{e.preventDefault();sessionMenu(c)};el.appendChild(d)})
+}
+function render(){
+  renderSidebar();updateStorage();
+  const c=active();
+  document.getElementById("chatTitle").textContent=c?.title||"New chat";
+  document.getElementById("modelLabel").textContent=(data.settings.model.split("/").pop()||"Model").replaceAll("-"," ");
+  if(!c||!c.messages.length){welcome();return}
+  const thread=document.getElementById("thread");thread.innerHTML="";
+  c.messages.forEach((m,i)=>{
+    const a=document.createElement("article");a.className="message "+m.role;
+    const actions=m.role==="assistant"?`<button onclick="copyMsg(${i})">Copy</button><button onclick="regen(${i})">Regenerate</button><button onclick="speakMsg(${i})">Speak</button>`:`<button onclick="editMsg(${i})">Edit</button>`;
+    a.innerHTML=`<div class="avatar">${m.role==="user"?"Y":"S"}</div><div><div class="meta"><b>${m.role==="user"?"You":"Samyek"}</b><span>${fmt(m.time||iso())}</span></div><div class="body">${m.role==="assistant"?markdown(m.content):esc(m.content).replace(/\n/g,"<br>")}</div><div class="actions">${actions}</div></div>`;
+    thread.appendChild(a);
+  });
+  scroll();updateTelemetry();
+}
+function welcome(){
+  document.getElementById("thread").innerHTML=`<div class="welcome"><div class="orb">S</div><div class="neural-stage" aria-hidden="true"><svg class="neural-svg" viewBox="0 0 760 235" preserveAspectRatio="xMidYMid meet"><g class="wire"><path d="M22 50H145L190 82M22 185H150L202 150M738 46H620L566 82M738 187H615L558 150"/><path d="M115 24L170 63M646 24L590 64M120 211L175 170M642 211L586 170"/><path d="M205 70L270 105L315 75M555 70L490 105L445 75M205 165L270 130L315 160M555 165L490 130L445 160"/><path d="M270 105L315 75L380 68L445 75L490 105L505 130L445 160L380 167L315 160L255 130Z"/><path d="M315 75L380 105L445 75M255 130L320 130L380 105L440 130L505 130M315 160L380 130L445 160"/></g><g><circle class="node" cx="22" cy="50" r="3"/><circle class="node" cx="22" cy="185" r="3"/><circle class="node" cx="738" cy="46" r="3"/><circle class="node" cx="738" cy="187" r="3"/><circle class="node" cx="205" cy="70" r="4"/><circle class="node" cx="555" cy="70" r="4"/><circle class="node" cx="205" cy="165" r="4"/><circle class="node" cx="555" cy="165" r="4"/><circle class="pulse" cx="190" cy="82" r="4"/><circle class="pulse" cx="566" cy="82" r="4"/><circle class="pulse" cx="202" cy="150" r="4"/><circle class="pulse" cx="558" cy="150" r="4"/></g><path class="brain" d="M380 61C327 51 285 80 288 119C276 142 296 164 322 164C339 184 367 176 380 166C393 176 421 184 438 164C464 164 484 142 472 119C475 80 433 51 380 61Z"/><path class="wire" d="M380 69V159M320 94L355 119L320 144M440 94L405 119L440 144M350 77L380 103L410 77M350 161L380 135L410 161"/><circle class="core" cx="380" cy="119" r="20"/><text x="380" y="123" text-anchor="middle" fill="#bffaff" font-size="11" font-family="system-ui">AI</text></svg></div><div class="advanced-panels"><div class="adv-card"><small>Neural Core</small><b>ONLINE</b></div><div class="adv-card"><small>Vision</small><b>READY</b></div><div class="adv-card"><small>Memory</small><b>${data.memories.length} ENTRIES</b></div><div class="adv-card"><small>Workspace</small><b>LOCAL-FIRST</b></div></div><h1>Meet Samyek.</h1><p>A thoughtful AI workspace for ideas, research, memory, files and building complete software projects.</p><div class="prompts"><button class="prompt" data-p="Build a complete responsive SaaS landing page in HTML, CSS and JavaScript. Return every file."><b>Build a project</b><span>Generate a complete runnable codebase.</span></button><button class="prompt" data-p="Explain this concept clearly and deeply, then give me a practical example."><b>Think with me</b><span>Break down difficult ideas.</span></button><button class="prompt" data-p="Review this idea as a senior product engineer. Identify risks and propose a stronger architecture."><b>Review & improve</b><span>Get structured technical feedback.</span></button><button class="prompt" data-p="Help me plan a polished product from idea to launch, including milestones and technical architecture."><b>Plan a product</b><span>Turn an idea into an execution plan.</span></button></div></div>`;
+  document.querySelectorAll(".prompt").forEach(b=>b.onclick=()=>{input.value=b.dataset.p;resize();input.focus()});
+}
+function markdown(src){
+  let s=String(src||""),blocks=[];
+  s=s.replace(/```([\w.+-]*)\n?([\s\S]*?)```/g,(m,l,c)=>{const id="b"+blocks.length;blocks.push({id,l:l||"code",c:c.replace(/\n$/,"" )});return"\u0000"+id+"\u0000"});
+  s=esc(s).replace(/`([^`\n]+)`/g,"<code>$1</code>").replace(/^### (.*)$/gm,"<h4>$1</h4>").replace(/^## (.*)$/gm,"<h3>$1</h3>").replace(/^# (.*)$/gm,"<h2>$1</h2>").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/\*([^*]+)\*/g,"<em>$1</em>");
+  s=s.replace(/^\s*[-*] (.*)$/gm,"<li>$1</li>").replace(/((?:<li>.*<\/li>\n?)+)/g,"<ul>$1</ul>").replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,(m,t,u)=>`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${t}</a>`);
+  s=s.replace(/\n{2,}/g,"</p><p>").replace(/\n/g,"<br>");s="<p>"+s+"</p>";
+  blocks.forEach(b=>s=s.replace("\u0000"+b.id+"\u0000",`<div class="code"><div class="codehead"><span>${esc(b.l)}</span><button onclick="copyCode(this)">Copy</button></div><pre>${esc(b.c)}</pre></div>`));
+  return s;
+}
+async function clipboardWrite(text){try{await navigator.clipboard.writeText(text);return true}catch(_){const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(_){ }ta.remove();return false}}
+window.copyCode=async b=>{await clipboardWrite(b.closest(".code").querySelector("pre").innerText);b.textContent="Copied";setTimeout(()=>b.textContent="Copy",900)};
+window.copyMsg=async i=>clipboardWrite(active().messages[i].content);
+window.speakMsg=i=>speak(active().messages[i].content);
+window.editMsg=i=>{const c=active();input.value=c.messages[i].content;c.messages=c.messages.slice(0,i);c.updatedAt=iso();save();render();resize();input.focus()};
+window.regen=async i=>{if(busy)return;const c=active();if(c.messages[i]?.role==="assistant")c.messages.splice(i);save();render();await callAI(c)};
+
+const input=document.getElementById("input");
+function resize(){input.style.height="auto";input.style.height=Math.min(Math.max(input.scrollHeight,56),190)+"px"}
+function scroll(){requestAnimationFrame(()=>{const x=document.getElementById("conversation");x.scrollTop=x.scrollHeight})}
+function setStatus(t,cls="ok"){const s=document.getElementById("status");s.textContent=t;s.className="status "+cls}
+
+function normalizeEndpoint(v){return String(v||"").trim().replace(/\/+$/,"");}
+function directUrl(){return normalizeEndpoint(data.settings.endpoint)}
+function proxyUrl(){return normalizeEndpoint(data.settings.proxyEndpoint)}
+function payload(c){
+  const messages=[];
+  if(data.settings.system)messages.push({role:"system",content:data.settings.system});
+  if(data.settings.memory&&data.memories.length)messages.push({role:"system",content:"Relevant saved user memories:\n"+data.memories.slice(-20).map(x=>"- "+x.text).join("\n")});
+  c.messages.filter(m=>m.role==="user"||m.role==="assistant").slice(-28).forEach(m=>{
+    if(m.role==="user"&&Array.isArray(m.attachments)&&m.attachments.length){
+      const parts=[{type:"text",text:m.content||""}];
+      m.attachments.forEach(a=>{
+        if(a.type?.startsWith("image/")&&a.dataUrl)parts.push({type:"image_url",image_url:{url:a.dataUrl}});
+        else if(a.text)parts[0].text+=`\n\n--- ${a.name} ---\n${a.text.slice(0,60000)}`;
+      });
+      messages.push({role:"user",content:parts});
+    }else messages.push({role:m.role,content:String(m.content||"")});
+  });
+  return {model:data.settings.model,messages,stream:!!data.settings.stream};
+}
+function parseContent(x){
+  const c=x?.choices?.[0]?.message?.content??x?.choices?.[0]?.text??x?.output?.[0]?.content?.[0]?.text??x?.output_text??"";
+  if(Array.isArray(c))return c.map(p=>typeof p==="string"?p:(p?.text||"")).join("");
+  return String(c||"");
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+async function fetchWithTimeout(url,options,timeout=90000){
+  const ac=new AbortController();const timer=setTimeout(()=>ac.abort("timeout"),timeout);
+  if(options.signal)options.signal.addEventListener("abort",()=>ac.abort(),{once:true});
+  try{return await fetch(url,{...options,signal:ac.signal,credentials:"omit",cache:"no-store"})}finally{clearTimeout(timer)}
+}
+async function request(url,body,signal){
+  const isProxy=proxyUrl()&&url===proxyUrl();
+  const headers={"Content-Type":"application/json","Accept":"application/json, text/event-stream"};
+  if(!isProxy)headers.Authorization="Bearer "+data.settings.apiKey;
+  let last;
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      const res=await fetchWithTimeout(url,{method:"POST",mode:"cors",signal,headers,body:JSON.stringify(body)});
+      if((res.status===429||res.status>=500)&&attempt<2){await sleep(700*(attempt+1));continue}
+      return res;
+    }catch(e){last=e;if(attempt<2&&e.name!=="AbortError"){await sleep(600*(attempt+1));continue}throw e}
+  }
+  throw last||new Error("Request failed");
+}
+async function callAI(c){
+  if(!data.settings.apiKey){openSettings("API key required. Paste your OneHop key, then save.");return}
+  busy=true;const sendBtn=document.getElementById("send");sendBtn.disabled=false;sendBtn.textContent="■";setStatus("Connecting…","busy");
+  const m={role:"assistant",content:"",time:iso(),streaming:true};c.messages.push(m);save();render();controller=new AbortController();
+  try{
+    let res;
+    try{res=await request(directUrl(),payload(c),controller.signal)}catch(first){
+      if(!data.settings.autoProxy||!proxyUrl()||first.name==="AbortError")throw first;
+      setStatus("Using secure proxy…","busy");res=await request(proxyUrl(),payload(c),controller.signal);
+    }
+    const ct=(res.headers.get("content-type")||"").toLowerCase();
+    if(!res.ok){let body="";try{body=await res.text()}catch(_){}let detail=body;try{const j=JSON.parse(body);detail=j.error?.message||j.message||JSON.stringify(j)}catch(_){}throw new Error(`HTTP ${res.status}${detail?": "+detail.slice(0,700):""}`)}
+    if(ct.includes("text/event-stream")&&res.body&&data.settings.stream)await stream(res,m);else{const raw=await res.text();let j;try{j=JSON.parse(raw)}catch(_){throw new Error("The server returned a non-JSON response: "+raw.slice(0,300))}m.content=parseContent(j);if(!m.content)throw new Error("The API returned 200 but no assistant content. Check the model and response format.")}
+    m.streaming=false;c.updatedAt=iso();maybeMemory(c.messages[c.messages.length-2]?.content);save();scanProject(m.content);render();setStatus("Connected","ok");
+  }catch(e){
+    m.streaming=false;
+    if(e.name==="AbortError"||String(e).toLowerCase().includes("aborted")){m.content="Generation stopped.";setStatus("Stopped","ok")}
+    else{let msg=e.message||String(e);if(msg==="Failed to fetch"||/NetworkError|Load failed|fetch|CORS/i.test(msg))msg="Browser network/CORS block. On GitHub Pages, set a secure Proxy endpoint in Settings and keep the OneHop key server-side. Direct browser requests only work when OneHop permits your site origin.";if(msg.includes("401"))msg="401 Unauthorized — check the OneHop API key.";else if(msg.includes("403"))msg="403 Forbidden — this key/model is not permitted.";else if(msg.includes("404"))msg="404 Not Found — verify the OneHop endpoint.";else if(msg.includes("429"))msg="429 Rate limited — wait a moment and retry.";m.content="**Samyek could not complete the request.**\n\n"+msg;setStatus("Connection error","err")}
+    c.updatedAt=iso();save();render();
+  }finally{busy=false;controller=null;sendBtn.disabled=false;sendBtn.textContent="↑"}
+}
+async function stream(res,m){
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf="";
+  const consume=async text=>{for(const event of text.split(/\r?\n\r?\n/)){const lines=event.split(/\r?\n/);for(const raw of lines){const line=raw.trim();if(!line.startsWith("data:"))continue;const p=line.slice(5).trim();if(!p||p==="[DONE]")continue;try{const d=JSON.parse(p);const delta=d?.choices?.[0]?.delta?.content??d?.choices?.[0]?.text??d?.output?.[0]?.content?.[0]?.text??"";if(delta){m.content+=delta;render()}}catch(_){} }}};
+  while(true){const {value,done}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const parts=buf.split(/\r?\n\r?\n/);buf=parts.pop()||"";if(parts.length)await consume(parts.join("\n\n"))}
+  buf+=dec.decode();if(buf.trim())await consume(buf);if(!m.content.trim())throw new Error("The stream ended without assistant content.");
+}
+async function send(){
+  if(busy){controller?.abort();return}
+  const text=input.value.trim();if(!text&&!attachments.length)return;
+  const c=ensure();if(!c)return;
+  const ready=attachments.filter(a=>a.ready===false).map(a=>a.promise);if(ready.length)await Promise.allSettled(ready);
+  const attachMeta=attachments.map(a=>({name:a.name,type:a.type,text:a.text||"",dataUrl:a.dataUrl||null}));
+  let content=text;if(attachMeta.length)content+=(content?"\n\n":"")+"Attached: "+attachMeta.map(a=>a.name).join(", ");
+  if(!c.messages.length)c.title=title(text||attachments[0]?.name||"New chat");
+  c.messages.push({role:"user",content,attachments:attachMeta,time:iso()});c.updatedAt=iso();input.value="";attachments=[];renderAttachments();resize();save();render();await callAI(c);
+}
+
+document.getElementById("fileInput").onchange=e=>{[...e.target.files].forEach(f=>{if(f.size>12*1024*1024){alert(`${f.name} is larger than 12 MB.`);return}const item={name:f.name,type:f.type||"application/octet-stream",text:"",dataUrl:null,ready:false,promise:null};item.promise=new Promise(resolve=>{const finish=()=>{item.ready=true;resolve();renderAttachments()};if(f.type.startsWith("image/")){const r=new FileReader();r.onload=()=>{item.dataUrl=r.result;finish()};r.onerror=finish;r.readAsDataURL(f)}else if(f.type.startsWith("text/")||/\.(txt|md|json|js|jsx|ts|tsx|html|css|py|java|c|cpp|rs|go|php|sql|yaml|yml|toml|xml|csv|svg)$/i.test(f.name)){const r=new FileReader();r.onload=()=>{item.text=String(r.result||"");finish()};r.onerror=finish;r.readAsText(f)}else finish()});attachments.push(item);renderAttachments()});e.target.value=""};
+function renderAttachments(){const x=document.getElementById("attachments");x.innerHTML=attachments.map((a,i)=>`<span class="attachment">${a.type?.startsWith("image/")?"▧ ":""}${esc(a.name)} ${a.ready===false?"· reading…":""} <button onclick="attachments.splice(${i},1);renderAttachments()" style="border:0;background:none;cursor:pointer">×</button></span>`).join("");x.classList.toggle("show",attachments.length>0)}
+function speak(t){if(!("speechSynthesis"in window))return alert("Text-to-speech is not available in this browser.");speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}
+function mic(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return alert("Voice recognition is not available in this browser.");const r=new R();r.lang=navigator.language||"en-US";r.interimResults=true;r.continuous=false;r.onresult=e=>{input.value=[...e.results].map(x=>x[0].transcript).join("");resize()};r.onerror=e=>setStatus("Voice input error","err");r.start()}
+
+function addMemory(text){text=String(text||"").trim();if(!text)return;const clean=text.replace(/^remember\s+(that\s+)?/i,"").trim();if(data.memories.some(m=>m.text.toLowerCase()===clean.toLowerCase()))return;data.memories.push({id:uid(),text:clean,createdAt:iso()});save()}
+function maybeMemory(text){if(!data.settings.memory||!text)return;const m=text.match(/^(?:please\s+)?remember(?:\s+that)?\s+(.+)$/i);if(m)addMemory(m[1])}
+function openMemories(){openDrawer("Memories",`<div class="card"><h3>Memory</h3><p style="color:var(--muted);font-size:11px">Memories are stored locally on this device and included in future conversations when enabled.</p><button class="btn" id="addMem">＋ Add memory</button></div><div class="card">${data.memories.length?data.memories.map(m=>`<div class="mem"><p>${esc(m.text)}</p><button class="mini danger" onclick="deleteMemory('${esc(m.id)}')">Delete</button></div>`).join(""):"<p style='color:var(--muted);font-size:11px'>No memories yet.</p>"}</div>`);document.getElementById("addMem").onclick=()=>{const x=prompt("What should Samyek remember?");if(x){addMemory(x);openMemories()}}}
+window.deleteMemory=id=>{data.memories=data.memories.filter(x=>x.id!==id);save();openMemories()};
+
+function parseFiles(text){const out={};const re=/FILE:\s*([^\n\r]+)\s*(?:\r?\n)+```[^\n]*\r?\n([\s\S]*?)```/g;let m;while((m=re.exec(text)))out[m[1].trim().replace(/^\/+/,"")]=m[2].replace(/\n$/,"" );return out}
+function scanProject(text){const f=parseFiles(text);if(Object.keys(f).length){project.files={...project.files,...f};project.active=project.active&&project.files[project.active]?project.active:Object.keys(f)[0];saveProject()}}
+function openProject(){document.getElementById("projectWorkspace").classList.add("open");renderFiles()}
+function renderFiles(){const tree=document.getElementById("fileTree"),names=Object.keys(project.files);tree.innerHTML=names.length?names.map(n=>`<div class="file ${project.active===n?"active":""}" data-file="${esc(n)}">${esc(n)}</div>`).join(""):"<div style='padding:18px;color:#888;font-size:11px'>Ask Samyek to build a project, then generated files will appear here.</div>";tree.querySelectorAll(".file").forEach(e=>e.onclick=()=>{project.active=e.dataset.file;saveProject();document.getElementById("editorName").textContent=project.active;document.getElementById("editor").value=project.files[project.active]||"";renderFiles()})}
+function buildPrompt(){input.value="Build a complete production-ready project for me. Return the full project as multiple files using FILE: path/to/file.ext followed by a fenced code block for every file. Include all required configuration, responsive UI, accessibility, error states and a README. Do not abbreviate or omit files. Project requirements: ";resize();input.focus()}
+function saveCurrentFile(){if(project.active){project.files[project.active]=document.getElementById("editor").value;saveProject()}}
+function download(name,content,type="text/plain"){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+async function exportProject(){saveCurrentFile();const files=Object.entries(project.files);if(!files.length)return alert("No project files yet.");if(window.showDirectoryPicker){try{const dir=await showDirectoryPicker();for(const [name,content] of files){const parts=name.split("/");let d=dir;for(let i=0;i<parts.length-1;i++)d=await d.getDirectoryHandle(parts[i],{create:true});const h=await d.getFileHandle(parts.at(-1),{create:true});const w=await h.createWritable();await w.write(content);await w.close()}}catch(e){if(e?.name!=="AbortError")alert("Project export failed: "+e.message)}}else download("samyek-project-files.json",JSON.stringify(project.files,null,2),"application/json")}
+
+function openDrawer(t,b){document.getElementById("drawerTitle").textContent=t;document.getElementById("drawerBody").innerHTML=b;document.getElementById("drawer").classList.add("open")}
+function closeDrawer(){document.getElementById("drawer").classList.remove("open")}
+function openInspector(){const c=active(),tokens=Math.round((c?.messages||[]).reduce((n,m)=>n+String(m.content||"").length/4,0));openDrawer("Workspace",`<div class="card"><h3>Session</h3><div class="kv"><span>Messages</span><b>${c?.messages.length||0}</b></div><div class="kv"><span>Approx. tokens</span><b>${tokens.toLocaleString()}</b></div><div class="kv"><span>Model</span><b>${esc(data.settings.model)}</b></div><div class="kv"><span>Memories</span><b>${data.memories.length}</b></div><div class="kv"><span>Projects files</span><b>${Object.keys(project.files).length}</b></div></div><div class="card"><h3>Connection</h3><p style="font-size:11px;color:var(--muted)">${proxyUrl()?"Secure proxy configured.":"Direct browser mode."} ${location.protocol==="https:"?"HTTPS page detected.":"Use HTTPS in production."}</p></div><div class="card"><h3>Capabilities</h3><p style="font-size:11px;color:var(--muted)">Streaming, retry/backoff, local sessions, memories, text/image attachments, voice I/O, project extraction, model discovery, import/export and responsive UI.</p></div><div class="card"><h3>Project</h3><button class="btn" id="openProj">Open project workspace</button></div>`);document.getElementById("openProj").onclick=openProject}
+function updateTelemetry(){}
+function applyAdvanced(){const on=!!data.settings.advanced;document.body.classList.toggle("advanced-mode",on);const t=document.getElementById("advancedToggle");if(t){t.classList.toggle("on",on);t.setAttribute("aria-pressed",String(on))}}
+function toggleAdvanced(){data.settings.advanced=!data.settings.advanced;applyAdvanced();save();render()}
+
+async function loadModelsFrom(endpoint,key){const base=normalizeEndpoint(endpoint),isProxy=proxyUrl()&&base===proxyUrl(),u=base.replace(/\/chat\/completions$/,"/models");const headers={Accept:"application/json"};if(!isProxy&&key)headers.Authorization="Bearer "+key;const r=await fetchWithTimeout(u,{method:"GET",headers},20000);const t=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${t.slice(0,300)}`);let j=JSON.parse(t);return Array.isArray(j.data)?j.data.map(x=>x.id).filter(Boolean):[]}
+function openSettings(message=""){
+  document.getElementById("modalTitle").textContent="Samyek settings";
+  document.getElementById("modalBody").innerHTML=`<div class="field"><label>OneHop endpoint</label><input id="setEndpoint" value="${esc(data.settings.endpoint)}"></div><div class="field"><label>Secure proxy endpoint (recommended for GitHub Pages)</label><input id="setProxy" value="${esc(data.settings.proxyEndpoint)}" placeholder="https://your-worker.example.workers.dev/chat"><small style="display:block;color:var(--muted);font-size:10px;margin-top:5px">A browser cannot bypass CORS from HTML. A proxy keeps the OneHop key off your public source.</small></div><div class="field"><label>OneHop API key</label><input id="setKey" type="password" autocomplete="off" value="${esc(data.settings.apiKey)}" placeholder="Paste your OneHop key"></div><div class="row"><div class="field"><label>Model</label><input id="setModel" value="${esc(data.settings.model)}"></div><div class="field"><label>Streaming</label><select id="setStream"><option value="true" ${data.settings.stream?"selected":""}>On</option><option value="false" ${!data.settings.stream?"selected":""}>Off</option></select></div></div><div class="field"><label>System instruction</label><textarea id="setSystem">${esc(data.settings.system)}</textarea></div><div class="field"><label>Interface</label><select id="setAdvanced"><option value="false" ${!data.settings.advanced?"selected":""}>Standard light workspace</option><option value="true" ${data.settings.advanced?"selected":""}>Advanced Neural Mode</option></select></div><div class="field"><label>Connection fallback</label><select id="setAutoProxy"><option value="true" ${data.settings.autoProxy?"selected":""}>Automatically use proxy if direct request fails</option><option value="false" ${!data.settings.autoProxy?"selected":""}>Direct only</option></select></div>${message?`<div style="padding:10px;border-radius:9px;background:#fff4f0;color:#8e4c39;font-size:11px;margin-bottom:10px">${esc(message)}</div>`:""}<div class="modalfoot"><button class="btn danger" id="wipe">Clear local data</button><button class="btn" id="models">Load models</button><button class="btn" id="test">Test connection</button><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="saveSet">Save</button></div>`;
+  document.getElementById("backdrop").classList.add("open");document.getElementById("cancel").onclick=closeModal;
+  document.getElementById("saveSet").onclick=()=>{data.settings.endpoint=document.getElementById("setEndpoint").value.trim()||DEFAULTS.endpoint;data.settings.proxyEndpoint=document.getElementById("setProxy").value.trim();data.settings.apiKey=document.getElementById("setKey").value.trim();data.settings.model=document.getElementById("setModel").value.trim()||DEFAULTS.model;data.settings.stream=document.getElementById("setStream").value==="true";data.settings.system=document.getElementById("setSystem").value;data.settings.advanced=document.getElementById("setAdvanced").value==="true";data.settings.autoProxy=document.getElementById("setAutoProxy").value==="true";applyAdvanced();save();closeModal();render();setStatus("Ready","ok")};
+  document.getElementById("test").onclick=testConnection;
+  document.getElementById("models").onclick=async()=>{const b=document.getElementById("models");const key=document.getElementById("setKey").value.trim(),endpoint=document.getElementById("setProxy").value.trim()||document.getElementById("setEndpoint").value.trim();if(!key&&!document.getElementById("setProxy").value.trim())return alert("Paste your OneHop API key or configure a secure proxy first.");b.disabled=true;b.textContent="Loading…";try{const models=await loadModelsFrom(endpoint,key);if(!models.length)throw new Error("No models were returned.");const model=document.getElementById("setModel");model.value=models.includes(model.value)?model.value:models[0];alert(`Loaded ${models.length} available models.`)}catch(e){alert("Could not load models.\n\n"+e.message)}finally{b.disabled=false;b.textContent="Load models"}};
+  document.getElementById("wipe").onclick=()=>{if(confirm("Delete all chats, memories, settings and projects from this device?")){localStorage.removeItem(STORE);localStorage.removeItem(PROJECT_STORE);location.reload()}}
+}
+async function testConnection(){
+  const key=document.getElementById("setKey").value.trim(),direct=document.getElementById("setEndpoint").value.trim(),proxy=document.getElementById("setProxy").value.trim(),endpoint=proxy||direct,model=document.getElementById("setModel").value.trim()||DEFAULTS.model;
+  if(!proxy&&!key)return alert("Paste your OneHop API key first, or configure a secure proxy endpoint.");
+  const b=document.getElementById("test");b.disabled=true;b.textContent="Testing…";
+  try{const headers={"Content-Type":"application/json",Accept:"application/json"};if(!proxy)headers.Authorization="Bearer "+key;const r=await fetchWithTimeout(endpoint,{method:"POST",headers,body:JSON.stringify({model,messages:[{role:"user",content:"Reply with exactly: SAMYEK_OK"}],stream:false})},30000);const t=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${t.slice(0,500)}`);let j;try{j=JSON.parse(t)}catch(_){throw new Error("The endpoint returned a non-JSON response.")}if(!parseContent(j))throw new Error("No assistant content was returned.");alert("Connection successful.\n\nSamyek received a valid OneHop response.")}catch(e){let msg=e.message||String(e);if(msg==="Failed to fetch"||/NetworkError|Load failed|fetch|CORS/i.test(msg))msg="Browser CORS/network block. For GitHub Pages, deploy the supplied secure proxy and paste its /chat URL into Secure proxy endpoint.";alert("Connection failed.\n\n"+msg)}finally{b.disabled=false;b.textContent="Test connection"}
+}
+function closeModal(){document.getElementById("backdrop").classList.remove("open")}
+function search(){document.getElementById("modalTitle").textContent="Search chats";document.getElementById("modalBody").innerHTML=`<div class="search"><input id="q" placeholder="Search conversations…"><div class="results" id="results"></div></div>`;document.getElementById("backdrop").classList.add("open");const q=document.getElementById("q");q.oninput=()=>results(q.value);q.focus();results("")}
+function results(q){const arr=data.chats.filter(c=>(c.title+" "+c.messages.map(m=>m.content).join(" ")).toLowerCase().includes(q.toLowerCase())).slice(0,20);document.getElementById("results").innerHTML=arr.map(c=>`<div class="result" data-id="${esc(c.id)}"><b>${esc(c.title)}</b><span>${c.messages.length} messages · ${fmt(c.updatedAt)}</span></div>`).join("")||"<div style='padding:12px;color:#888;font-size:11px'>No matches.</div>";document.querySelectorAll(".result").forEach(e=>e.onclick=()=>{activeId=e.dataset.id;save();closeModal();render()})}
+function exportWorkspace(){download("samyek-workspace.json",JSON.stringify({...data,project},null,2),"application/json")}
+document.getElementById("importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.chats||!x.settings)throw 0;data={...data,...x,settings:{...DEFAULTS,...x.settings,advanced:!!x.settings.advanced,autoProxy:x.settings.autoProxy!==false}};if(x.project?.files)project=x.project;activeId=data.activeId||data.chats[0]?.id||null;save();saveProject();applyAdvanced();render();alert("Workspace imported.")}catch(_){alert("Invalid Samyek workspace file.")}};r.readAsText(f);e.target.value=""}
+
+/* Events */
+document.getElementById("newChat").onclick=newChat;document.getElementById("advancedToggle").onclick=toggleAdvanced;document.getElementById("send").onclick=send;document.getElementById("attachBtn").onclick=()=>document.getElementById("fileInput").click();document.getElementById("micBtn").onclick=mic;document.getElementById("speakBtn").onclick=()=>{const c=active(),m=[...(c?.messages||[])].reverse().find(x=>x.role==="assistant"&&x.content);if(m)speak(m.content)};document.getElementById("buildBtn").onclick=buildPrompt;document.getElementById("memoryBtn").onclick=openMemories;document.getElementById("projectsBtn").onclick=openProject;document.getElementById("inspectorBtn").onclick=openInspector;document.getElementById("filesBtn").onclick=openProject;document.getElementById("settingsBtn").onclick=()=>openSettings();document.getElementById("closeDrawer").onclick=closeDrawer;document.getElementById("closeModal").onclick=closeModal;document.getElementById("searchBtn").onclick=search;document.getElementById("exportBtn").onclick=exportWorkspace;document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();document.getElementById("mobileMenu").onclick=()=>document.getElementById("sidebar").classList.toggle("open");
+document.addEventListener("click",e=>{if(window.innerWidth<=780&&document.getElementById("sidebar").classList.contains("open")&&!e.target.closest("#sidebar")&&!e.target.closest("#mobileMenu"))closeSidebar()});document.getElementById("closeProject").onclick=()=>document.getElementById("projectWorkspace").classList.remove("open");document.getElementById("editor").oninput=saveCurrentFile;document.getElementById("downloadFile").onclick=()=>{saveCurrentFile();if(project.active)download(project.active.split("/").pop(),project.files[project.active])};document.getElementById("downloadProject").onclick=exportProject;input.oninput=resize;input.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}};
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();search()}if(e.key==="Escape"){if(controller)controller.abort();closeDrawer();closeModal();document.getElementById("projectWorkspace").classList.remove("open");document.getElementById("sidebar").classList.remove("open")}});window.addEventListener("beforeunload",save);
+const composer=document.querySelector(".composer");["dragenter","dragover"].forEach(ev=>composer.addEventListener(ev,e=>{e.preventDefault();composer.style.borderColor="var(--accent)"}));["dragleave","drop"].forEach(ev=>composer.addEventListener(ev,e=>{e.preventDefault();composer.style.borderColor=""}));composer.addEventListener("drop",e=>{const files=[...e.dataTransfer.files];if(!files.length)return;const dt=new DataTransfer();files.forEach(f=>dt.items.add(f));document.getElementById("fileInput").files=dt.files;document.getElementById("fileInput").dispatchEvent(new Event("change",{bubbles:true}))});
+
+if(!activeId&&data.chats.length)activeId=data.chats[0].id;if(!activeId)newChat();else render();updateStorage();applyAdvanced();resize();
+</script>
+</body>
+</html>
